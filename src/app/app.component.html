@@ -1,5 +1,19 @@
-<h1>
-  {{title}}
-</h1>
-<h5>{{data|json}}</h5>
-<json-forms [data]="data" [dataSchema]="schema" [uiSchema]="uischema"></json-forms>
+<md-toolbar color="primary">
+  <span>{{title}}</span>
+</md-toolbar>
+<div *ngFor="let path of pathReport">
+  <h2>{{path.path}}</h2>
+  <div *ngFor="let op of path.ops">
+    <h3>{{op.operation}}</h3>
+    <div *ngFor="let response of op">
+    <h4>{{response.operation}}</h4>
+  </div>
+  </div>
+  <md-card>
+    <md-card-title>{{path.path}}</md-card-title>
+    <md-card-content>
+        <json-forms [data]="data" [dataSchema]="schema"></json-forms>
+    </md-card-content>
+    <md-card-actions><button md-raised-button>Raised button</button></md-card-actions>
+  </md-card>
+</div>

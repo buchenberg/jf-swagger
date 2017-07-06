@@ -1,115 +1,74 @@
 import { Component } from '@angular/core';
+import { PetstoreService } from './petstore.service';
 import 'jsonforms';
-
+import * as SwaggerParser from 'swagger-parser/dist/swagger-parser';
+import * as async from 'async';
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  title = 'JSONForms Angular Seed!';
-  private schema = {
-    'type': 'object',
-    'properties': {
-      'name': {
-        'type': 'string',
-        'minLength': 3
-      },
-      'personalData': {
-        'type': 'object',
-        'properties': {
-          'age': {
-            'type': 'integer'
-          },
-          'height': {
-            'type': 'number'
+  title = '';
+  private swagger = {};
+  private schemas = [];
+  private schema = {};
+  private data = {};
+  private pathReport = [];
+
+  constructor(private petstoreService: PetstoreService) {
+    let self = this;
+    async.waterfall([
+      getSwagger,
+      derefSwagger,
+    ], function (err, result) {
+      console.log(result)
+      var paths = [];
+      Object.keys(result.paths).forEach(function (pathKey) {
+        var pathObj = {
+          path: pathKey,
+          ops: []
+        };
+        var path = result.paths[pathKey]
+        Object.keys(path).forEach(function (opKey) {
+          var opObj = {
+            operation: opKey,
+            responses: []
           }
-        },
-        'required': ['age', 'height']
-      },
-      'vegetarian': {
-        'type': 'boolean'
-      },
-      'birthDate': {
-        'type': 'string',
-        'format': 'date'
-      },
-      'nationality': {
-        'type': 'string',
-        'enum': ['DE', 'IT', 'JP', 'US', 'RU', 'Other']
-      },
-      'occupation': {
-        'type': 'string'
-      }
-    },
-    'required': ['occupation', 'nationality']
-  };
-  private uischema = {
-    'type': 'VerticalLayout',
-    'elements': [
-      {
-        'type': 'HorizontalLayout',
-        'elements': [
-          {
-            'type': 'Control',
-            'label': {
-              'text': 'Name',
-              'show': true
-            },
-            'scope': {
-              '$ref': '#/properties/name'
+          var responses = path[opKey].responses
+          //console.log('responses: ', JSON.stringify(responses, null, 2))
+          Object.keys(responses).forEach(function (responseKey) {
+            var respObj = {
+              verb: responseKey,
+              schema: {}
             }
-          },
-          {
-            'type': 'Control',
-            'label': {
-              'text': 'Age'
-            },
-            'scope': {
-              '$ref': '#/properties/personalData/properties/age'
+            var response = responses[responseKey];
+            if (response.schema) {
+              respObj.schema = response.schema;
+              opObj.responses.push(respObj);
+              pathObj.ops.push(opObj);
+              paths.push(pathObj);
             }
-          },
-          {
-            'type': 'Control',
-            'label': 'Height',
-            'scope': {
-              '$ref': '#/properties/personalData/properties/height'
-            }
-          }
-        ]
-      },
-      {
-        'type': 'HorizontalLayout',
-        'elements': [
-          {
-            'type': 'Control',
-            'label': 'Nationality',
-            'scope': {
-              '$ref': '#/properties/nationality'
-            }
-          },
-          {
-            'type': 'Control',
-            'label': 'Occupation',
-            'scope': {
-              '$ref': '#/properties/occupation'
-            },
-            'suggestion': ['Accountant', 'Engineer', 'Freelancer',
-              'Journalism', 'Physician', 'Student', 'Teacher', 'Other']
-          },
-          {
-            'type': 'Control',
-            'label': 'Birthday',
-            'scope': {
-              '$ref': '#/properties/birthDate'
-            }
-          }
-        ]
-      }
-    ]
-  };
-  private data = {
-    name: 'John Doe',
-    birthDate: '1985-06-02'
-  };
+          });
+        });
+      });
+      console.log(JSON.stringify(paths, null, 2))
+      self.pathReport = paths;
+      self.swagger = result;
+      self.title = result.info.title + ' Schemas'
+    });
+    function getSwagger(callback) {
+      petstoreService.getSwagger()
+        .subscribe(
+        data => callback(null, data),
+        error => callback(error),
+      );
+    }
+    function derefSwagger(swagger, callback) {
+      SwaggerParser.dereference(swagger)
+        .then(function (api) {
+          callback(null, api)
+        });
+    }
+  }
 }
